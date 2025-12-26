@@ -265,11 +265,20 @@ export class BillingService {
       }
 
       // Create billing header
+      console.log('=== BILLING CREATE DEBUG ===');
+      console.log('DTO status:', createBillingDto.status);
+      console.log(
+        'Full DTO:',
+        JSON.stringify(createBillingDto, null, 2).substring(0, 500),
+      );
+
       const billing = this.billingRepository.create({
         ...createBillingDto,
         createdBy: userId,
         createdByIp: userIp,
       });
+
+      console.log('Created billing entity status:', billing.status);
 
       // Generate billNo if not provided
       if (!billing.billNo) {
@@ -280,6 +289,17 @@ export class BillingService {
       // Set default paymentType if not provided
       if (!billing.paymentType) {
         billing.paymentType = 'cash';
+      }
+
+      // If status is 'completed', set approvalStatus to 'approved' and generate invoice number
+      if (billing.status === 'completed') {
+        billing.approvalStatus = 'approved';
+        billing.approvedAt = new Date();
+        billing.completedAt = new Date();
+        // Generate invoice number
+        const invoiceTimestamp = Date.now();
+        billing.invoiceNo = `INV-${invoiceTimestamp}`;
+        billing.invoiceDate = new Date().toISOString().split('T')[0];
       }
 
       // Set payment status based on payment type
